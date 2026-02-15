@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myanmar Crossword Master</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&display=swap');
+
+        body { font-family: 'Pyidaungsu', sans-serif; background-color: #f8f9fa; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #7f8c8d; font-size: 14px; margin-bottom: 25px; }
+
+        /* Input Area */
+        .config-box { background: #fff; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; }
+        .title-input { width: 100%; padding: 12px; font-size: 18px; border: 2px solid #eee; border-radius: 6px; font-family: 'Pyidaungsu'; margin-bottom: 15px; box-sizing: border-box; }
+        
+        .input-list { max-height: 300px; overflow-y: auto; padding-right: 10px; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; background: #f9f9f9; padding: 8px; border-radius: 6px; border: 1px solid #eee; }
+        .row-num { font-weight: bold; color: #2980b9; width: 25px; text-align: center; }
+        .input-group input { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: 'Pyidaungsu'; outline: none; }
+        .word-in { flex: 1; }
+        .clue-in { flex: 2; }
+        .btn-del { background: #e74c3c; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+        .controls { text-align: center; margin-top: 15px; padding-bottom: 15px; border-bottom: 2px dashed #eee; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: bold; color: white; display: flex; align-items: center; gap: 5px; transition: 0.2s; }
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+        .btn-add { background: #3498db; }
+        .btn-gen { background: #27ae60; }
+        .btn-word { background: #2980b9; display: none; } 
+        .btn-ans { background: #f39c12; display: none; }
+
+        /* Output Area */
+        #output-area { display: none; margin-top: 30px; }
+        
+        /* The Grid */
+        table.crossword { border-collapse: collapse; margin: 0 auto; border: 2px solid #000; }
+        td.cell { 
+            width: 40px; height: 40px; border: 1px solid #444; text-align: center; 
+            vertical-align: middle; font-weight: bold; font-size: 18px; position: relative; 
+            background: white; padding: 0;
+        }
+        
+        /* DIAGONAL LINE STYLE (Requested) */
+        td.blocked { 
+            background: linear-gradient(to top right, transparent calc(50% - 1px), #999 calc(50% - 1px), #999 calc(50% + 1px), transparent calc(50% + 1px));
+            background-color: #f8f9fa; /* Light gray background */
+        }
+
+        span.num { position: absolute; top: 1px; left: 2px; font-size: 10px; color: #555; pointer-events: none; }
+        .answer-text { color: #2980b9; opacity: 0; transition: 0.3s; }
+        .show-answers .answer-text { opacity: 1; }
+
+        /* Clues */
+        .clues-box { display: flex; justify-content: space-between; margin-top: 30px; gap: 30px; }
+        .clue-col { flex: 1; background: #fff; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        .clue-col h3 { border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-top: 0; color: #2c3e50; font-size: 18px; }
+        ul { list-style: none; padding: 0; }
+        li { margin-bottom: 10px; font-size: 15px; line-height: 1.5; border-bottom: 1px dotted #eee; padding-bottom: 4px; }
+        li b { color: #2980b9; margin-right: 5px; }
+
+        /* Stats Badge */
+        .stats { text-align: center; font-size: 12px; color: #7f8c8d; margin-top: 10px; font-style: italic; }
+
+        @media print {
+            .no-print, .config-box, .controls { display: none !important; }
+            #output-area { display: block !important; }
+            body { background: white; }
+            .container { box-shadow: none; border: none; margin: 0; width: 100%; max-width: 100%; }
+            td.blocked { background: linear-gradient(to top right, transparent 48%, #ccc 49%, #ccc 51%, transparent 52%); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="no-print">Myanmar Crossword Master</h1>
+    <p class="subtitle no-print">Advanced Layout Engine & Word Export</p>
+
+    <div class="config-box no-print">
+        <input type="text" id="puzzleTitle" class="title-input" value="မြန်မာစာ ဉာဏ်စမ်းပဟေဠိ" placeholder="ခေါင်းစဉ် ရေးပါ...">
+        
+        <div id="input-list" class="input-list"></div>
+        
+        <div style="text-align: right; margin-top: 10px;">
+            <button class="btn btn-add" onclick="addNewRow()">+ စကားလုံး ထပ်ထည့်ရန်</button>
+        </div>
+    </div>
+
+    <div class="controls no-print">
+        <button class="btn btn-gen" onclick="runGenerator()">
+            <span>⚡</span> ဖန်တီးမည် (Generate)
+        </button>
+        <button class="btn btn-ans" id="btnAns" onclick="toggleAnswers()">
+            <span>👁️</span> အဖြေ ပြ/ဖွက်
+        </button>
+        <button class="btn btn-word" id="btnWord" onclick="exportToWord()">
+            <span>📄</span> Word (Docx) ယူမည်
+        </button>
+    </div>
+
+    <div id="output-area">
+        <h2 style="text-align:center; margin-bottom:20px;" id="printTitle"></h2>
+        <div id="grid-wrapper"></div>
+        
+        <div class="stats" id="layoutStats"></div>
+
+        <div class="clues-box">
+            <div class="clue-col">
+                <h3>အလျားလိုက် (Across)</h3>
+                <ul id="clues-across"></ul>
+            </div>
+            <div class="clue-col">
+                <h3>ဒေါင်လိုက် (Down)</h3>
+                <ul id="clues-down"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. DATA & UI LOGIC ---
+    const defaultData = [
+        {w: "မင် ဂ လာ ပါ", c: "မြန်မာ့ရိုးရာ နှုတ်ဆက်စကား"},
+        {w: "ကု သိုလ်", c: "ကောင်းမှု"},
+        {w: "နိဗ္ ဗာန်", c: "အငြိမ်းဓာတ်"},
+        {w: "တ ရား", c: "ဓမ္မ"},
+        {w: "သံ သ ရာ", c: "မပြတ်လည်နေသော ဘဝစက်ဝန်း"},
+        {w: "ကံ", c: "ပြုလုပ်မှု"}
+    ];
+
+    function init() {
+        const list = document.getElementById('input-list');
+        list.innerHTML = '';
+        defaultData.forEach(d => addNewRow(d.w, d.c));
+    }
+
+    function addNewRow(w='', c='') {
+        const list = document.getElementById('input-list');
+        const div = document.createElement('div');
+        div.className = 'input-group';
+        div.innerHTML = `
+            <span class="row-num"></span>
+            <input type="text" class="word-in" placeholder="စကားလုံး (Space ခြားပါ)" value="${w}">
+            <input type="text" class="clue-in" placeholder="အမြွက်" value="${c}">
+            <button class="btn-del" onclick="removeRow(this)">×</button>
+        `;
+        list.appendChild(div);
+        updateNumbers();
+        // Auto scroll to bottom
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function removeRow(btn) {
+        btn.parentElement.remove();
+        updateNumbers();
+    }
+
+    function updateNumbers() {
+        const rows = document.querySelectorAll('.input-group .row-num');
+        rows.forEach((span, index) => {
+            span.innerText = index + 1;
+        });
+    }
+
+    function toggleAnswers() {
+        document.querySelector('table.crossword').classList.toggle('show-answers');
+    }
+
+    // --- 2. ADVANCED GENERATION ALGORITHM (Balancing) ---
+    
+    function runGenerator() {
+        const title = document.getElementById('puzzleTitle').value;
+        document.getElementById('printTitle').innerText = title;
+
+        // 1. Parse Input
+        const inputs = document.querySelectorAll('.input-group');
+        let words = [];
+        inputs.forEach(div => {
+            let txt = div.querySelector('.word-in').value.trim();
+            let clue = div.querySelector('.clue-in').value.trim();
+            if(txt && clue) {
+                let parts = txt.split(/\s+/);
+                words.push({ original: txt, parts: parts, clue: clue, len: parts.length });
+            }
+        });
+
+        if(words.length === 0) return alert("စကားလုံးများ ထည့်ပါဦး ဘုရား။");
+
+        // 2. Multi-Attempt Logic (Try 20 times to find best balance)
+        let bestLayout = null;
+        let bestScore = -Infinity;
+
+        // Try sorting: Longest first usually best, but sometimes random helps.
+        // We will stick to Longest First for stability, but try different placements.
+        words.sort((a,b) => b.len - a.len);
+
+        for(let attempt = 0; attempt < 20; attempt++) {
+            let result = generateLayout(words);
+            
+            // Score Calculation: 
+            // +10 per word placed
+            // -1 per difference between Across/Down count (Balance penalty)
+            // -0.1 per total grid area (Compactness bonus)
+            
+            let placedCount = result.placed.length;
+            let aCount = result.placed.filter(x => x.dir === 'across').length;
+            let dCount = result.placed.filter(x => x.dir === 'down').length;
+            let balance = Math.abs(aCount - dCount);
+            
+            // Calculate Area
+            let area = (result.bounds.maxR - result.bounds.minR) * (result.bounds.maxC - result.bounds.minC);
+            
+            let score = (placedCount * 100) - (balance * 5) - (area * 0.05);
+
+            if(score > bestScore) {
+                bestScore = score;
+                bestLayout = result;
+            }
+        }
+
+        renderResult(bestLayout);
+    }
+
+    function generateLayout(wordList) {
+        const SIZE = 60;
+        const CENTER = 30;
+        let grid = Array(SIZE).fill().map(() => Array(SIZE).fill(null));
+        let placed = [];
+
+        // Place first word (Try to make it Across or Down randomly to shake things up)
+        let first = wordList[0];
+        let startDir = Math.random() > 0.5 ? 'across' : 'down'; 
+        placeWord(grid, first, CENTER, CENTER, startDir);
+        placed.push({ ...first, r: CENTER, c: CENTER, dir: startDir });
+
+        for(let i=1; i<wordList.length; i++) {
+            let current = wordList[i];
+            let bestMove = null;
+
+            // Find all possible intersections
+            for(let pWord of placed) {
+                for(let cIdx=0; cIdx<current.len; cIdx++) {
+                    for(let pIdx=0; pIdx<pWord.len; pIdx++) {
+                        if(current.parts[cIdx] === pWord.parts[pIdx]) {
+                            // Found intersection
+                            let newDir = (pWord.dir === 'across') ? 'down' : 'across';
+                            let newR = (pWord.dir === 'across') ? pWord.r - cIdx : pWord.r + pIdx;
+                            let newC = (pWord.dir === 'across') ? pWord.c + pIdx : pWord.c - cIdx;
+
+                            if(canPlace(grid, current, newR, newC, newDir)) {
+                                // We found a valid spot. 
+                                // To balance, we prioritize the direction that has FEWER words currently.
+                                let aCount = placed.filter(x=>x.dir==='across').length;
+                                let dCount = placed.filter(x=>x.dir==='down').length;
+                                
+                                // Logic: If we need more Down words, and this move is Down, take it immediately!
+                                if(newDir === 'down' && dCount < aCount) {
+                                    bestMove = { r: newR, c: newC, dir: newDir };
+                                    break; 
+                                }
+                                // Otherwise, just save it and keep looking for a better balancing move
+                                if(!bestMove) bestMove = { r: newR, c: newC, dir: newDir };
+                            }
+                        }
+                    }
+                    if(bestMove && (bestMove.dir === 'down' && placed.filter(x=>x.dir==='down').length < placed.filter(x=>x.dir==='across').length)) break;
+                }
+                if(bestMove && (bestMove.dir === 'down' && placed.filter(x=>x.dir==='down').length < placed.filter(x=>x.dir==='across').length)) break;
+            }
+
+            if(bestMove) {
+                placeWord(grid, current, bestMove.r, bestMove.c, bestMove.dir);
+                placed.push({ ...current, ...bestMove });
+            } else {
+                // Island placement (Failed to connect)
+                let b = getBounds(grid);
+                let islandR = b.maxR + 2;
+                placeWord(grid, current, islandR, b.minC, 'across');
+                placed.push({ ...current, r: islandR, c: b.minC, dir: 'across' });
+            }
+        }
+
+        return { grid, placed, bounds: getBounds(grid) };
+    }
+
+    // Helper Functions
+    function canPlace(grid, word, r, c, dir) {
+        if(r<0 || c<0 || r>=60 || c>=60) return false;
+        if(dir === 'across' && c + word.len >= 60) return false;
+        if(dir === 'down' && r + word.len >= 60) return false;
+
+        for(let i=0; i<word.len; i++) {
+            let cr = (dir==='across')?r:r+i;
+            let cc = (dir==='across')?c+i:c;
+            let cell = grid[cr][cc];
+            
+            if(cell !== null && cell !== word.parts[i]) return false;
+
+            if(cell === null) { // Empty cell check neighbors
+                if(dir === 'across') {
+                    if(grid[cr-1] && grid[cr-1][cc]) return false;
+                    if(grid[cr+1] && grid[cr+1][cc]) return false;
+                    if(i===0 && grid[cr][cc-1]) return false;
+                    if(i===word.len-1 && grid[cr][cc+1]) return false;
+                } else {
+                    if(grid[cr][cc-1]) return false;
+                    if(grid[cr][cc+1]) return false;
+                    if(i===0 && grid[cr-1] && grid[cr-1][cc]) return false;
+                    if(i===word.len-1 && grid[cr+1] && grid[cr+1][cc]) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function placeWord(grid, word, r, c, dir) {
+        for(let i=0; i<word.len; i++) {
+            let cr = (dir==='across')?r:r+i;
+            let cc = (dir==='across')?c+i:c;
+            grid[cr][cc] = word.parts[i];
+        }
+    }
+
+    function getBounds(grid) {
+        let minR=60, maxR=0, minC=60, maxC=0;
+        for(let r=0; r<60; r++) {
+            for(let c=0; c<60; c++) {
+                if(grid[r][c]) {
+                    if(r < minR) minR = r;
+                    if(r > maxR) maxR = r;
+                    if(c < minC) minC = c;
+                    if(c > maxC) maxC = c;
+                }
+            }
+        }
+        return {minR, maxR, minC, maxC};
+    }
+
+    // --- 3. RENDERING & EXPORT ---
+
+    function renderResult(layout) {
+        const { grid, placed, bounds } = layout;
+        
+        // Calculate Numbers
+        let numMap = {};
+        let counter = 1;
+        placed.sort((a,b) => (a.r - b.r) || (a.c - b.c));
+        
+        let cluesA = [];
+        let cluesD = [];
+
+        placed.forEach(w => {
+            let key = `${w.r},${w.c}`;
+            if(!numMap[key]) numMap[key] = counter++;
+            let n = numMap[key];
+            if(w.dir === 'across') cluesA.push({n, t: w.clue});
+            else cluesD.push({n, t: w.clue});
+        });
+
+        // Generate HTML Grid
+        let html = '<table class="crossword">';
+        for(let r=bounds.minR; r<=bounds.maxR; r++) {
+            html += '<tr>';
+            for(let c=bounds.minC; c<=bounds.maxC; c++) {
+                let cell = grid[r][c];
+                if(cell) {
+                    let num = numMap[`${r},${c}`] || '';
+                    html += `<td class="cell"><span class="num">${num}</span><span class="answer-text">${cell}</span></td>`;
+                } else {
+                    // DIAGONAL LINE HERE
+                    html += '<td class="blocked"></td>';
+                }
+            }
+            html += '</tr>';
+        }
+        html += '</table>';
+
+        document.getElementById('grid-wrapper').innerHTML = html;
+        
+        // Stats
+        document.getElementById('layoutStats').innerText = 
+            `Balanced Layout: ${cluesA.length} Across / ${cluesD.length} Down`;
+
+        // Render Clues
+        const renderClues = (id, list) => {
+            const ul = document.getElementById(id);
+            ul.innerHTML = '';
+            list.sort((a,b)=>a.n-b.n).forEach(x => {
+                ul.innerHTML += `<li><b>${x.n}.</b> ${x.t}</li>`;
+            });
+        };
+        renderClues('clues-across', cluesA);
+        renderClues('clues-down', cluesD);
+
+        // Show buttons
+        document.getElementById('output-area').style.display = 'block';
+        document.getElementById('btnWord').style.display = 'flex';
+        document.getElementById('btnAns').style.display = 'flex';
+    }
+
+    // --- WORD EXPORT FUNCTION ---
+    function exportToWord() {
+        const title = document.getElementById('puzzleTitle').value;
+        const gridHtml = document.getElementById('grid-wrapper').innerHTML;
+        const cluesA = document.getElementById('clues-across').innerHTML;
+        const cluesD = document.getElementById('clues-down').innerHTML;
+
+        // Create a Word-friendly HTML structure
+        // We replace "blocked" class with simple style for Word to understand
+        let safeGrid = gridHtml.replace(/class="blocked"/g, 'style="background-color:#eee; border:1px solid #000;"');
+        
+        // Remove diagonal gradient for Word (it doesn't support CSS
