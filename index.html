@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myanmar Crossword Creative (Final)</title>
+    
+    <script>
+        window.onerror = function(msg, url, line) {
+            var el = document.getElementById('status');
+            if(el) el.innerHTML = "<span style='color:red; background:#fee; padding:5px;'>Error: " + msg + " (Line " + line + ")</span>";
+        };
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&display=swap');
+
+        body { font-family: 'Pyidaungsu', sans-serif; background-color: #f8fafc; padding: 20px; color: #334155; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        
+        h1 { text-align: center; color: #0f172a; margin-bottom: 5px; font-weight: 800; }
+        .status-bar { text-align: center; font-size: 13px; margin-bottom: 20px; color: #10b981; min-height: 20px; }
+
+        /* INPUT STYLES */
+        .config-box { border: 2px dashed #cbd5e1; padding: 25px; border-radius: 12px; background: #f1f5f9; transition: 0.3s; }
+        .config-box:hover { border-color: #94a3b8; }
+        
+        .title-input { width: 100%; padding: 12px; font-size: 20px; font-weight: bold; border: 2px solid #e2e8f0; border-radius: 8px; font-family: 'Pyidaungsu'; box-sizing: border-box; margin-bottom: 20px; color: #1e293b; }
+        
+        .input-list { margin-bottom: 15px; } 
+        .input-group { display: flex; gap: 10px; margin-bottom: 12px; align-items: center; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .row-num { font-weight: bold; color: #64748b; width: 30px; text-align: center; }
+        
+        .word-in, .clue-in { flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: 'Pyidaungsu'; font-size: 16px; outline: none; }
+        .clue-in { flex: 2; }
+        .word-in:focus, .clue-in:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        
+        .btn-del { background: #ef4444; color: white; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: 0.2s; }
+        .btn-del:hover { background: #dc2626; transform: scale(1.05); }
+
+        /* CONTROLS */
+        .controls { text-align: center; margin-top: 25px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; padding-top: 20px; border-top: 2px solid #f1f5f9; }
+        .btn { padding: 12px 28px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; color: white; transition: 0.2s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .btn:active { transform: translateY(1px); }
+        .btn-add { background: #3b82f6; } 
+        .btn-gen { background: #10b981; } 
+        .btn-word { background: #6366f1; display: none; } 
+        .btn-ans { background: #f59e0b; display: none; }
+
+        /* OUTPUT GRID - CREATIVE STYLE */
+        #output-area { display: none; margin-top: 40px; }
+        
+        /* The table itself should have no border, only cells */
+        table.crossword { border-collapse: separate; border-spacing: 0; margin: 0 auto; empty-cells: hide; }
+        
+        td.cell { 
+            width: 45px; height: 45px; 
+            border: 2px solid #0f172a; 
+            text-align: center; vertical-align: middle; 
+            font-weight: bold; font-size: 20px; position: relative; 
+            background: white; padding: 0; cursor: default;
+            color: #1e293b;
+        }
+        
+        /* Transparent Blocked Cells (No ugly blocks) */
+        td.blocked { 
+            background: transparent; 
+            border: none; /* Invisible border for empty space */
+        }
+        
+        span.num { position: absolute; top: 2px; left: 3px; font-size: 11px; color: #64748b; font-weight: bold; pointer-events: none; }
+        .answer-text { color: #2563eb; visibility: hidden; }
+        .show-answers .answer-text { visibility: visible; }
+
+        .stats-badge { text-align: center; margin-bottom: 20px; font-size: 14px; color: #64748b; font-style: italic; }
+
+        /* CLUES LAYOUT */
+        .clues-box { display: flex; gap: 40px; margin-top: 30px; }
+        .clue-col { flex: 1; padding: 20px; background: #f8fafc; border-radius: 12px; }
+        .clue-col h3 { border-bottom: 3px solid #cbd5e1; margin-top: 0; padding-bottom: 10px; color: #334155; font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
+        ul { padding-left: 20px; margin: 0; }
+        li { margin-bottom: 12px; line-height: 1.6; color: #475569; }
+        li b { color: #0f172a; margin-right: 8px; font-size: 18px; }
+
+        @media print {
+            .no-print, .config-box, .controls, .status-bar, .stats-badge { display: none !important; }
+            #output-area { display: block !important; margin-top: 0; }
+            .container { box-shadow: none; border: none; margin: 0; width: 100%; max-width: 100%; padding: 0; }
+            .clues-box { display: flex !important; page-break-inside: avoid; }
+            td.cell { border: 1.5px solid black; }
+            body { background: white; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="no-print">Myanmar Creative Crossword</h1>
+    <div id="status" class="status-bar no-print">Ready for Creativity...</div>
+
+    <div class="config-box no-print">
+        <label style="font-weight:bold; display:block; margin-bottom:8px;">Puzzle Title:</label>
+        <input type="text" id="puzzleTitle" class="title-input" value="Creative Myanmar Puzzle">
+        
+        <div id="input-list" class="input-list"></div>
+        
+        <div style="text-align: right;">
+            <button class="btn btn-add" id="btnAdd" type="button">+ Add Word</button>
+        </div>
+    </div>
+
+    <div class="controls no-print">
+        <button class="btn btn-gen" id="btnGen" type="button">⚡ Generate Creative Layout</button>
+        <button class="btn btn-ans" id="btnAns" type="button">👁️ Toggle Answers</button>
+        <button class="btn btn-word" id="btnWord" type="button">📄 Download Word (Docx)</button>
+    </div>
+
+    <div id="output-area">
+        <h2 style="text-align:center; margin-bottom:10px;" id="printTitle"></h2>
+        <div class="stats-badge" id="balanceStats"></div>
+        <div id="grid-wrapper"></div>
+        
+        <div class="clues-box">
+            <div class="clue-col">
+                <h3>အလျားလိုက် (Across)</h3>
+                <ul id="clues-across"></ul>
+            </div>
+            <div class="clue-col">
+                <h3>ဒေါင်လိုက် (Down)</h3>
+                <ul id="clues-down"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. CORE UI LOGIC ---
+
+    function getEl(id) { return document.getElementById(id); }
+
+    function addNewRow(w, c, focusWord) {
+        w = w || ""; c = c || "";
+        var list = getEl('input-list');
+        var div = document.createElement('div');
+        div.className = 'input-group';
+        
+        var spanNum = document.createElement('span');
+        spanNum.className = 'row-num';
+        
+        var inputWord = document.createElement('input');
+        inputWord.type = 'text'; inputWord.className = 'word-in';
+        inputWord.placeholder = 'Word (Space separated)'; inputWord.value = w;
+        
+        var inputClue = document.createElement('input');
+        inputClue.type = 'text'; inputClue.className = 'clue-in';
+        inputClue.placeholder = 'Clue/Definition'; inputClue.value = c;
+        
+        // Tab Logic
+        inputClue.addEventListener('keydown', function(e) {
+            if(e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                addNewRow('', '', true);
+            }
+        });
+
+        var btnDel = document.createElement('button');
+        btnDel.className = 'btn-del'; btnDel.innerHTML = '×';
+        btnDel.type = 'button';
+        btnDel.onclick = function() { div.remove(); updateNumbers(); };
+
+        div.appendChild(spanNum); div.appendChild(inputWord);
+        div.appendChild(inputClue); div.appendChild(btnDel);
+        list.appendChild(div);
+        updateNumbers();
+
+        if(focusWord) inputWord.focus();
+    }
+
+    function updateNumbers() {
+        var rows = document.querySelectorAll('.input-group .row-num');
+        for(var i=0; i<rows.length; i++) rows[i].innerText = (i + 1);
+    }
+
+    // --- 2. CREATIVE GENERATION ALGORITHM ---
+    
+    function runGenerator() {
+        var title = getEl('puzzleTitle').value;
+        getEl('printTitle').innerText = title;
+
+        var inputs = document.querySelectorAll('.input-group');
+        var words = [];
+        
+        for(var i=0; i<inputs.length; i++) {
+            var wIn = inputs[i].querySelector('.word-in').value.trim();
+            var cIn = inputs[i].querySelector('.clue-in').value.trim();
+            if(wIn && cIn) {
+                var parts = wIn.split(/\s+/);
+                if(parts.length > 0) words.push({ original: wIn, parts: parts, clue: cIn, len: parts.length });
+            }
+        }
+
+        if(words.length === 0) return alert("Please add some words first!");
+
+        // Try multiple times to find the most balanced layout
+        var bestResult = null;
+        var bestBalanceScore = -Infinity;
+
+        // We run 50 iterations to find a layout where Across/Down counts are closest
+        for(var attempt=0; attempt<50; attempt++) {
+            // Shuffle word order slightly for randomness
+            var shuffledWords = [...words].sort(() => Math.random() - 0.5);
+            // Always put longest word first to anchor
+            shuffledWords.sort((a,b) => b.len - a.len); 
+
+            var res = generateLayout(shuffledWords);
+            
+            // Calculate Balance Score
+            var aCount = res.placed.filter(x => x.dir === 'across').length;
+            var dCount = res.placed.filter(x => x.dir === 'down').length;
+            var diff = Math.abs(aCount - dCount);
+            
+            // Score: Closer counts = higher score. More placed words = higher score.
+            var score = (res.placed.length * 100) - (diff * 10);
+            
+            if(score > bestBalanceScore) {
+                bestBalanceScore = score;
+                bestResult = res;
+            }
+        }
+
+        renderGrid(bestResult.grid, bestResult.placed);
+    }
+
+    function generateLayout(wordList) {
+        var SIZE = 80; // Large grid for freedom
+        var MID = 40;
+        var grid = [];
+        for(var r=0; r<SIZE; r++) {
+            var row = [];
+            for(var c=0; c<SIZE; c++) row.push(null);
+            grid.push(row);
+        }
+
+        var placed = [];
+        
+        // Place First Word: Randomize Direction (50% Chance Down)
+        var first = wordList[0];
+        var startDir = Math.random() < 0.5 ? 'across' : 'down';
+        
+        placeWord(grid, first, MID, MID, startDir);
+        placed.push(createPlacedObj(first, MID, MID, startDir));
+
+        // Place Others
+        for(var i=1; i<wordList.length; i++) {
+            var current = wordList[i];
+            var candidates = [];
+
+            // Find intersections
+            for(var p=0; p<placed.length; p++) {
+                var pWord = placed[p];
+                for(var cIdx=0; cIdx<current.len; cIdx++) {
+                    for(var pIdx=0; pIdx<pWord.len; pIdx++) {
+                        if(current.parts[cIdx] === pWord.parts[pIdx]) {
+                            var newDir = (pWord.dir === 'across') ? 'down' : 'across';
+                            var newR = (pWord.dir === 'across') ? pWord.r - cIdx : pWord.r + pIdx;
+                            var newC = (pWord.dir === 'across') ? pWord.c + pIdx : pWord.c - cIdx;
+
+                            if(canPlace(grid, current, newR, newC, newDir)) {
+                                candidates.push({r: newR, c: newC, dir: newDir});
+                            }
+                        }
+                    }
+                }
+            }
+
+            if(candidates.length > 0) {
+                // Pick a candidate that balances the directions
+                var aCount = placed.filter(x => x.dir === 'across').length;
+                var dCount = placed.filter(x => x.dir === 'down').length;
+                
+                // If Across > Down, prefer Down candidates.
+                var preferredDir = (aCount > dCount) ? 'down' : 'across';
+                
+                var bestCand = candidates.find(c => c.dir === preferredDir);
+                if(!bestCand) bestCand = candidates[Math.floor(Math.random() * candidates.length)]; // Fallback random
+                
+                placeWord(grid, current, bestCand.r, bestCand.c, bestCand.dir);
+                placed.push(createPlacedObj(current, bestCand.r, bestCand.c, bestCand.dir));
+            } else {
+                // Island Placement: Put it far below to avoid overlap, but try to alternate direction
+                var bounds = getBounds(grid);
+                var forceR = bounds.maxR + 2;
+                // Alternate direction for islands too
+                var lastDir = placed[placed.length-1].dir;
+                var forceDir = (lastDir === 'across') ? 'down' : 'across';
+                
+                placeWord(grid, current, forceR, bounds.minC, forceDir);
+                placed.push(createPlacedObj(current, forceR, bounds.minC, forceDir));
+            }
+        }
+        return { grid: grid, placed: placed };
+    }
+
+    // --- HELPER FUNCTIONS ---
+
+    function createPlacedObj(word, r, c, dir) {
+        return { original: word.original, clue: word.clue, len: word.len, parts: word.parts, r: r, c: c, dir: dir };
+    }
+
+    function canPlace(grid, word, r, c, dir) {
+        if(r<0 || c<0 || r>=80 || c>=80) return false;
+        if(dir === 'across' && c + word.len >= 80) return false;
+        if(dir === 'down' && r + word.len >= 80) return false;
+
+        for(var i=0; i<word.len; i++) {
+            var cr = (dir==='across') ? r : r+i;
+            var cc = (dir==='across') ? c+i : c;
+            var cell = grid[cr][cc];
+
+            if(cell !== null && cell !== word.parts[i]) return false;
+
+            if(cell === null) {
+                // Check neighbors strictly
+                if(dir === 'across') {
+                    if(grid[cr-1] && grid[cr-1][cc]) return false;
+                    if(grid[cr+1] && grid[cr+1][cc]) return false;
+                    if(i===0 && grid[cr][cc-1]) return false;
+                    if(i===word.len-1 && grid[cr][cc+1]) return false;
+                } else {
+                    if(grid[cr][cc-1]) return false;
+                    if(grid[cr][cc+1]) return false;
+                    if(i===0 && grid[cr-1] && grid[cr-1][cc]) return false;
+                    if(i===word.len-1 && grid[cr+1] && grid[cr+1][cc]) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function placeWord(grid, word, r, c, dir) {
+        for(var i=0; i<word.len; i++) {
+            var cr = (dir==='across') ? r : r+i;
+            var cc = (dir==='across') ? c+i : c;
+            grid[cr][cc] = word.parts[i];
+        }
+    }
+
+    function getBounds(grid) {
+        var minR=80, maxR=0, minC=80, maxC=0, empty=true;
+        for(var r=0; r<80; r++) {
+            for(var c=0; c<80; c++) {
+                if(grid[r][c]) {
+                    empty = false;
+                    if(r<minR)minR=r; if(r>maxR)maxR=r;
+                    if(c<minC)minC=c; if(c>maxC)maxC=c;
+                }
+            }
+        }
+        return empty ? {minR:0,maxR:0,minC:0,maxC:0} : {minR:minR,maxR:maxR,minC:minC,maxC:maxC};
+    }
+
+    function renderGrid(grid, placed) {
+        var bounds = getBounds(grid);
+        var numMap = {};
+        var counter = 1;
+        
+        // Sort for numbering: Top-Left to Bottom-Right
+        placed.sort(function(a,b){ return (a.r - b.r) || (a.c - b.c); });
+        
+        var cluesA = [], cluesD = [];
+        for(var i=0; i<placed.length; i++) {
+            var w = placed[i];
+            var key = w.r + ',' + w.c;
+            if(!numMap[key]) numMap[key] = counter++;
+            var n = numMap[key];
+            if(w.dir === 'across') cluesA.push({n:n, t:w.clue});
+            else cluesD.push({n:n, t:w.clue});
+        }
+        
+        // Update Stats
+        getEl('balanceStats').innerText = "Balance Check: " + cluesA.length + " Across vs " + cluesD.length + " Down";
+
+        var html = '<table class="crossword">';
+        for(var r=bounds.minR; r<=bounds.maxR; r++) {
+            html += '<tr>';
+            for(var c=bounds.minC; c<=bounds.maxC; c++) {
+                var cell = grid[r][c];
+                if(cell) {
+                    var num = numMap[r+','+c] || '';
+                    html += '<td class="cell"><span class="num">'+num+'</span><span class="answer-text">'+cell+'</span></td>';
+                } else {
+                    html += '<td class="blocked"></td>'; // Transparent block
+                }
+            }
+            html += '</tr>';
+        }
+        html += '</table>';
+
+        getEl('grid-wrapper').innerHTML = html;
+        
+        var renderList = function(id, list) {
+            var ul = getEl(id);
+            ul.innerHTML = '';
+            list.sort(function(a,b){return a.n - b.n}).forEach(function(x){
+                ul.innerHTML += '<li><b>'+x.n+'.</b> '+x.t+'</li>';
+            });
+        };
+        renderList('clues-across', cluesA);
+        renderList('clues-down', cluesD);
+
+        getEl('output-area').style.display = 'block';
+        getEl('btnWord').style.display = 'inline-block';
+        getEl('btnAns').style.display = 'inline-block';
+    }
+
+    // --- WORD EXPORT ---
+    function exportToWord() {
+        var title = getEl('puzzleTitle').value;
+        var gridHtml = getEl('grid-wrapper').innerHTML;
+        var cluesA = getEl('clues-across').innerHTML;
+        var cluesD = getEl('clues-down').innerHTML;
+        
+        // Remove class="blocked" cells for cleaner Word doc
+        // Word tables with no borders on empty cells look like "floating" crosswords
+        var safeGrid = gridHtml.replace(/class="blocked"/g, 'style="border:none;"');
+        
+        var content = 
+            "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>" +
+            "<head><meta charset='utf-8'><title>"+title+"</title></head>" +
+            "<body style='font-family: \"Pyidaungsu\", sans-serif;'>" +
+            "<h1 style='text-align:center; color:#1e3a8a;'>"+title+"</h1><br>" +
+            safeGrid +
+            "<br><br>" +
+            "<table width='100%' style='border-top:2px solid #000; padding-top:20px;'><tr>" +
+            "<td valign='top' width='50%' style='padding-right:20px;'><h3>အလျားလိုက်</h3><ul>"+cluesA+"</ul></td>" +
+            "<td valign='top' width='50%' style='padding-left:20px; border-left:1px solid #ccc;'><h3>ဒေါင်လိုက်</h3><ul>"+cluesD+"</ul></td>" +
+            "</tr></table></body></html>";
+
+        var blob = new Blob(['\ufeff', content], {type: 'application/msword'});
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = title + '.doc';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // --- INIT ---
+    getEl('btnAdd').onclick = function() { addNewRow(); };
+    getEl('btnGen').onclick = function() { runGenerator(); };
+    getEl('btnAns').onclick = function() { 
+        var t = document.querySelector('table.crossword');
+        if(t) t.classList.toggle('show-answers');
+    };
+    getEl('btnWord').onclick = function() { exportToWord(); };
+
+    // Initial Data
+    addNewRow("မင် ဂ လာ ပါ", "နှုတ်ဆက်စကား");
+    addNewRow("ကု သိုလ်", "ကောင်းမှု");
+    
+</script>
+</body>
+</html>
