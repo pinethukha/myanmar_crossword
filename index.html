@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myanmar Crossword Creator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&display=swap');
+
+        body { font-family: 'Pyidaungsu', sans-serif; background-color: #f0f2f5; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        h1 { text-align: center; color: #1a73e8; margin-bottom: 20px; }
+        .instruction { background: #e8f0fe; padding: 15px; border-radius: 8px; color: #1967d2; font-size: 14px; margin-bottom: 20px; border-left: 5px solid #1967d2; }
+
+        /* Input Area */
+        .input-group { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .input-group input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: 'Pyidaungsu'; font-size: 16px; }
+        .word-in { flex: 1; }
+        .clue-in { flex: 2; }
+        .btn-del { background: #ff5252; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 18px; }
+
+        .actions { text-align: center; margin-top: 20px; padding-bottom: 20px; border-bottom: 2px dashed #ddd; }
+        .btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin: 5px; transition: 0.2s; }
+        .btn-add { background: #4285f4; color: white; }
+        .btn-gen { background: #34a853; color: white; }
+        .btn-print { background: #607d8b; color: white; display: none; } /* Hidden by default */
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        /* Crossword Output */
+        #output-area { display: none; margin-top: 30px; }
+        table.crossword { border-collapse: collapse; margin: 0 auto; }
+        td.cell { 
+            width: 40px; height: 40px; border: 1px solid #333; text-align: center; 
+            vertical-align: middle; font-weight: bold; font-size: 18px; position: relative; 
+            background: white;
+        }
+        td.black { background: #222; border: 1px solid #222; }
+        span.num { position: absolute; top: 2px; left: 2px; font-size: 10px; font-weight: normal; color: #444; }
+
+        .clues-section { display: flex; justify-content: space-between; margin-top: 30px; gap: 20px; }
+        .clue-col { width: 48%; }
+        .clue-col h3 { border-bottom: 2px solid #333; padding-bottom: 5px; }
+        ul { list-style: none; padding: 0; }
+        li { margin-bottom: 8px; line-height: 1.6; }
+
+        /* Printing */
+        @media print {
+            .no-print, .input-group, .actions, .instruction, h1 { display: none !important; }
+            #output-area { display: block !important; margin-top: 0; }
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; margin: 0; width: 100%; max-width: 100%; }
+            .clues-section { display: block; } /* Stack clues for print if needed, or keep flex */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="no-print">မြန်မာ Crossword ဖန်တီးစက်</h1>
+
+    <div class="instruction no-print">
+        <strong>အသုံးပြုနည်း (User Guide):</strong><br>
+        ၁။ <b>Word:</b> အဖြေစကားလုံးကို ရိုက်ပါ (မြန်မာစာလုံးများကို <b>Space</b> ခြား၍ ရိုက်ပါ)။ <br>
+        &nbsp;&nbsp;&nbsp; ဥပမာ - <code style="background:#fff; padding:2px 5px; border-radius:3px;">မ င်္ဂ လာ</code> (သို့မဟုတ်) <code style="background:#fff; padding:2px 5px; border-radius:3px;">ကု သိုလ်</code><br>
+        ၂။ <b>Clue:</b> အမြွက် သို့မဟုတ် အဓိပ္ပာယ် ရိုက်ထည့်ပါ။<br>
+        ၃။ <b>Generate Puzzle</b> ခလုတ်ကို နှိပ်ပါ။
+    </div>
+
+    <div id="inputs" class="no-print">
+        </div>
+
+    <div class="actions no-print">
+        <button class="btn btn-add" onclick="addRow()">+ နောက်ထပ် စကားလုံးထည့်ရန်</button>
+        <button class="btn btn-gen" onclick="calculateGrid()">Generate Puzzle (ဖန်တီးမည်)</button>
+        <button class="btn btn-print" id="printBtn" onclick="window.print()">Print (ထုတ်ယူရန်)</button>
+    </div>
+
+    <div id="output-area">
+        <h2 style="text-align:center;">မြန်မာစာ ဉာဏ်စမ်းပဟေဠိ</h2>
+        <div id="grid-container"></div>
+        
+        <div class="clues-section">
+            <div class="clue-col">
+                <h3>အလျားလိုက် (Across)</h3>
+                <ul id="clues-across"></ul>
+            </div>
+            <div class="clue-col">
+                <h3>ဒေါင်လိုက် (Down)</h3>
+                <ul id="clues-down"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. SETUP & INPUT HANDLING ---
+    const defaultWords = [
+        {w: "မ င်္ဂ လာ", c: "ကြီးပွားတိုးတက်ကြောင်း တရား"},
+        {w: "ကု သိုလ်", c: "ကောင်းမှု အလုပ်"},
+        {w: "ပ ညာ", c: "အမှားအမှန် ဝေဖန်ပိုင်းခြားနိုင်ခြင်း"}
+    ];
+
+    function init() {
+        const container = document.getElementById('inputs');
+        container.innerHTML = '';
+        defaultWords.forEach(item => addRow(item.w, item.c));
+    }
+
+    function addRow(word = "", clue = "") {
+        const div = document.createElement('div');
+        div.className = 'input-group';
+        div.innerHTML = `
+            <input type="text" class="word-in" placeholder="အဖြေ (ဥပမာ - မ င်္ဂ လာ)" value="${word}">
+            <input type="text" class="clue-in" placeholder="အမြွက်" value="${clue}">
+            <button class="btn-del" onclick="this.parentElement.remove()" title="Remove">×</button>
+        `;
+        document.getElementById('inputs').appendChild(div);
+    }
+
+    // --- 2. GENERATION LOGIC (Simplified Backtracking) ---
+    function calculateGrid() {
+        const inputs = document.querySelectorAll('.input-group');
+        let wordList = [];
+        
+        // Harvest data
+        inputs.forEach(div => {
+            let rawWord = div.querySelector('.word-in').value.trim();
+            let clue = div.querySelector('.clue-in').value.trim();
+            if (rawWord && clue) {
+                // Split by space usually, but handle if user forgot space (warn them?)
+                // For now, we assume user follows instruction: "မ င်္ဂ လာ" -> ["မ", "င်္ဂ", "လာ"]
+                let parts = rawWord.split(/\s+/); 
+                wordList.push({ 
+                    original: rawWord,
+                    parts: parts, // Array of syllables
+                    clue: clue,
+                    len: parts.length
+                });
+            }
+        });
+
+        if (wordList.length === 0) { alert("ကျေးဇူးပြု၍ စကားလုံးများ ထည့်ပေးပါ ဘုရား။"); return; }
+
+        // Sort: Longest words first (better for layout)
+        wordList.sort((a, b) => b.len - a.len);
+
+        // Grid Settings
+        const size = 20; 
+        let grid = createEmptyGrid(size);
+        let placedWords = [];
+
+        // Try to place words
+        // 1. Place first word in center
+        let first = wordList[0];
+        let startR = Math.floor(size/2);
+        let startC = Math.floor((size - first.len)/2);
+        place(grid, first, startR, startC, 'across');
+        placedWords.push({ ...first, r: startR, c: startC, dir: 'across' });
+
+        // 2. Place remaining (Greedy Approach)
+        for(let i=1; i<wordList.length; i++) {
+            let current = wordList[i];
+            let isPlaced = false;
+
+            // Try to match with any letter of any already placed word
+            for(let pWord of placedWords) {
+                if(isPlaced) break;
+                
+                // Check intersection
+                for(let myIdx=0; myIdx<current.len; myIdx++) {
+                    let myChar = current.parts[myIdx];
+                    
+                    for(let pIdx=0; pIdx<pWord.len; pIdx++) {
+                        let pChar = pWord.parts[pIdx];
+
+                        if(myChar === pChar) {
+                            // Found a matching letter!
+                            // If pWord is ACROSS, current must be DOWN
+                            let attemptDir = (pWord.dir === 'across') ? 'down' : 'across';
+                            
+                            // Calculate proposed start position
+                            let attemptR = (pWord.dir === 'across') 
+                                ? pWord.r - myIdx 
+                                : pWord.r + pIdx;
+                                
+                            let attemptC = (pWord.dir === 'across') 
+                                ? pWord.c + pIdx 
+                                : pWord.c - myIdx;
+
+                            if(canPlace(grid, current, attemptR, attemptC, attemptDir)) {
+                                place(grid, current, attemptR, attemptC, attemptDir);
+                                placedWords.push({ ...current, r: attemptR, c: attemptC, dir: attemptDir });
+                                isPlaced = true;
+                                break;
+                            }
+                        }
+                    }
+                    if(isPlaced) break;
+                }
+            }
+        }
+
+        // --- 3. RENDERING ---
+        if(placedWords.length < wordList.length) {
+            alert(`သတိပြုရန်: စကားလုံး (${wordList.length}) လုံးအနက် (${placedWords.length}) လုံးသာ နေရာချနိုင်ပါသည် ဘုရား။ ကျန်သော စကားလုံးများသည် အခြားစာလုံးများနှင့် ချိတ်ဆက်မရ၍ ဖြစ်ပါသည်။`);
+        }
+
+        renderGrid(grid, placedWords, size);
+        document.getElementById('printBtn').style.display = 'inline-block';
+        document.getElementById('output-area').style.display = 'block';
+    }
+
+    function createEmptyGrid(size) {
+        let g = [];
+        for(let i=0; i<size; i++) g.push(new Array(size).fill(null));
+        return g;
+    }
+
+    function canPlace(grid, wordObj, r, c, dir) {
+        const size = grid.length;
+        if(r < 0 || c < 0) return false;
+        if(dir === 'across' && c + wordObj.len > size) return false;
+        if(dir === 'down' && r + wordObj.len > size) return false;
+
+        // Check each cell
+        for(let i=0; i<wordObj.len; i++) {
+            let cr = (dir === 'across') ? r : r+i;
+            let cc = (dir === 'across') ? c+i : c;
+            let currentContent = grid[cr][cc];
+
+            // 1. Collision check
+            if(currentContent !== null && currentContent !== wordObj.parts[i]) return false;
+
+            // 2. Neighbor check (Don't touch other words adjacently unless crossing)
+            // This is a simplified check. Perfect implementation needs more checks.
+            // If cell is empty, ensure no neighbors perpendicular to direction
+            if(currentContent === null) {
+                if(dir === 'across') {
+                    if(grid[cr-1] && grid[cr-1][cc]) return false; // Top
+                    if(grid[cr+1] && grid[cr+1][cc]) return false; // Bottom
+                    // Check Left/Right ends
+                    if(i===0 && grid[cr][cc-1]) return false; 
+                    if(i===wordObj.len-1 && grid[cr][cc+1]) return false;
+                } else {
+                    if(grid[cr][cc-1]) return false; // Left
+                    if(grid[cr][cc+1]) return false; // Right
+                    // Check Top/Bottom ends
+                    if(i===0 && grid[cr-1] && grid[cr-1][cc]) return false;
+                    if(i===wordObj.len-1 && grid[cr+1] && grid[cr+1][cc]) return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    function place(grid, wordObj, r, c, dir) {
+        for(let i=0; i<wordObj.len; i++) {
+            let cr = (dir === 'across') ? r : r+i;
+            let cc = (dir === 'across') ? c+i : c;
+            grid[cr][cc] = wordObj.parts[i];
+        }
+    }
+
+    function renderGrid(grid, placedWords, size) {
+        // Crop grid to content
+        let minR = size, maxR = 0, minC = size, maxC = 0;
+        let hasContent = false;
+        for(let r=0; r<size; r++) {
+            for(let c=0; c<size; c++) {
+                if(grid[r][c]) {
+                    hasContent = true;
+                    if(r < minR) minR = r;
+                    if(r > maxR) maxR = r;
+                    if(c < minC) minC = c;
+                    if(c > maxC) maxC = c;
+                }
+            }
+        }
+
+        if(!hasContent) return;
+
+        // Calculate Numbers
+        // Map "r,c" -> number
+        let numMap = {};
+        let numberCounter = 1;
+        
+        // Sort words by position to assign numbers logically (Top-left first)
+        placedWords.sort((a,b) => (a.r - b.r) || (a.c - b.c));
+
+        let cluesA = [];
+        let cluesD = [];
+
+        placedWords.forEach(w => {
+            let key = `${w.r},${w.c}`;
+            if(!numMap[key]) {
+                numMap[key] = numberCounter++;
+            }
+            let num = numMap[key];
+            if(w.dir === 'across') cluesA.push({n: num, t: w.clue});
+            else cluesD.push({n: num, t: w.clue});
+        });
+
+        // HTML Gen
+        let html = '<table class="crossword">';
+        for(let r=minR; r<=maxR; r++) {
+            html += '<tr>';
+            for(let c=minC; c<=maxC; c++) {
+                let cellVal = grid[r][c];
+                if(cellVal) {
+                    let num = numMap[`${r},${c}`] || '';
+                    html += `<td class="cell"><span class="num">${num}</span></td>`; // Hide answer for print
+                } else {
+                    html += '<td class="black"></td>';
+                }
+            }
+            html += '</tr>';
+        }
+        html += '</table>';
+        document.getElementById('grid-container').innerHTML = html;
+
+        // Clues Gen
+        const ulA = document.getElementById('clues-across');
+        const ulD = document.getElementById('clues-down');
+        ulA.innerHTML = '';
+        ulD.innerHTML = '';
+        
+        cluesA.sort((a,b)=>a.n-b.n).forEach(x => ulA.innerHTML += `<li><b>${x.n}.</b> ${x.t}</li>`);
+        cluesD.sort((a,b)=>a.n-b.n).forEach(x => ulD.innerHTML += `<li><b>${x.n}.</b> ${x.t}</li>`);
+    }
+
+    // Start
+    init();
+
+</script>
+
+</body>
+</html>
