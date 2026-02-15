@@ -3,88 +3,83 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Myanmar Crossword Maker</title>
+    <title>Myanmar Crossword Generator</title>
     <style>
-        body { font-family: "Pyidaungsu", sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; }
-        h1 { color: #333; }
-        .controls { margin-bottom: 20px; }
-        .grid-container { display: grid; gap: 2px; margin: 0 auto; background-color: #333; border: 2px solid #333; width: fit-content; }
-        .cell {
-            width: 40px; height: 40px; background-color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 18px; cursor: pointer; position: relative;
+        body { font-family: "Pyidaungsu", sans-serif; background-color: #f8f9fa; padding: 20px; color: #333; }
+        h1, h2 { text-align: center; color: #2c3e50; }
+        
+        /* Input Section */
+        .input-container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .word-entry { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .word-entry input[type="text"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: "Pyidaungsu"; }
+        .input-word { flex: 1; }
+        .input-clue { flex: 2; }
+        .btn-remove { background: #ff4444; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        
+        .controls { text-align: center; margin-top: 20px; }
+        .btn { padding: 10px 20px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; color: white; margin: 5px; }
+        .btn-add { background-color: #2196F3; }
+        .btn-create { background-color: #4CAF50; }
+        .btn-print { background-color: #607D8B; display: none; }
+
+        /* Output Section */
+        #puzzle-output { display: none; margin-top: 30px; }
+        .crossword-grid { border-collapse: collapse; margin: 0 auto; border: 2px solid #000; }
+        .crossword-grid td { 
+            width: 40px; height: 40px; border: 1px solid #000; text-align: center; 
+            vertical-align: middle; position: relative; font-size: 18px; font-weight: bold;
         }
-        .cell input {
-            width: 100%; height: 100%; border: none; text-align: center;
-            font-family: "Pyidaungsu", sans-serif; font-size: 16px; outline: none; background: transparent;
-        }
-        .cell.black { background-color: black; }
-        .cell.black input { display: none; }
-        .clue-number {
-            position: absolute; top: 1px; left: 1px; font-size: 10px; color: #333; pointer-events: none;
-        }
-        .btn { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #4CAF50; color: white; border: none; border-radius: 5px; margin: 5px; }
-        .btn-print { background-color: #008CBA; }
+        .cell-number { position: absolute; top: 2px; left: 2px; font-size: 10px; font-weight: normal; }
+        .black-cell { background-color: #000; }
+        .empty-cell { background-color: #fff; }
+
+        /* Clues Display */
+        .clues-container { display: flex; justify-content: space-around; margin-top: 30px; }
+        .clue-box { width: 45%; }
+        .clue-box h3 { border-bottom: 2px solid #333; padding-bottom: 5px; }
+        ul { list-style: none; padding: 0; }
+        li { margin-bottom: 8px; }
+
+        /* Print Styles */
         @media print {
-            .controls, h1 { display: none; }
-            .grid-container { border: 2px solid black; }
-            .cell { border: 1px solid black; }
+            .input-container, .controls, h1 { display: none; }
+            #puzzle-output { display: block; }
+            .btn-print { display: none !important; }
+            body { background: white; }
+            .crossword-grid td { border: 1px solid #000 !important; }
         }
+        
+        .note { font-size: 14px; color: #d32f2f; margin-bottom: 15px; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h1>မြန်မာ Crossword ဖန်တီးစက်</h1>
+    <div class="input-container">
+        <h1>မြန်မာ Crossword ဖန်တီးစက်</h1>
+        <p class="note">သတိပြုရန် - အဖြေစကားလုံးများကို တစ်လုံးနှင့်တစ်လုံး Space ခြား၍ ရိုက်ပါ (ဥပမာ - မ င်္ဂ လာ)</p>
+        
+        <div id="word-list">
+            </div>
 
-    <div class="controls">
-        <label>အကွက်အရေအတွက် (Rows/Cols): </label>
-        <input type="number" id="gridSize" value="10" min="5" max="20" style="width: 50px;">
-        <button class="btn" onclick="createGrid()">ဇယားကွက်သစ်ဆွဲမည်</button>
-        <br><br>
-        <button class="btn btn-print" onclick="window.print()">Print ထုတ်မည် (PDF)</button>
-        <p style="font-size: 14px; color: #666;">(အကွက်ကို နှိပ်ပါက "အမည်းကွက်" ပြောင်းပါမည်။ စာရိုက်ထည့်နိုင်ပါသည်။)</p>
+        <div class="controls">
+            <button class="btn btn-add" onclick="addInputRow()">+ နောက်ထပ် စကားလုံးထည့်မည်</button>
+            <br><br>
+            <button class="btn btn-create" onclick="generateCrossword()">ပဟေဠိ ဖန်တီးမည် (Create)</button>
+        </div>
     </div>
 
-    <div id="crossword" class="grid-container"></div>
+    <div class="controls">
+        <button class="btn btn-print" id="printBtn" onclick="window.print()">Print ထုတ်မည် (PDF)</button>
+    </div>
 
-    <script>
-        function createGrid() {
-            const size = document.getElementById('gridSize').value;
-            const container = document.getElementById('crossword');
-            container.style.gridTemplateColumns = `repeat(${size}, 40px)`;
-            container.innerHTML = '';
+    <div id="puzzle-output">
+        <h2 id="puzzle-title">မြန်မာစာ ဉာဏ်စမ်းပဟေဠိ</h2>
+        <table class="crossword-grid" id="grid"></table>
 
-            for (let i = 0; i < size * size; i++) {
-                let cell = document.createElement('div');
-                cell.className = 'cell';
-                
-                // Toggle Black/White on Click (if not typing)
-                cell.onclick = function(e) {
-                    if (e.target.tagName !== 'INPUT') {
-                        this.classList.toggle('black');
-                        if (!this.classList.contains('black')) {
-                            let input = this.querySelector('input');
-                            if (!input) {
-                                input = document.createElement('input');
-                                input.maxLength = 1; 
-                                this.appendChild(input);
-                            }
-                            input.focus();
-                        } else {
-                            this.innerHTML = ''; // Clear content if black
-                        }
-                    }
-                };
-
-                let input = document.createElement('input');
-                input.maxLength = 1; // Limit to 1 character visually
-                cell.appendChild(input);
-
-                container.appendChild(cell);
-            }
-        }
-        // Initialize with default size
-        createGrid();
-    </script>
-</body>
-</html>
+        <div class="clues-container">
+            <div class="clue-box">
+                <h3>အလျားလိုက် (Across)</h3>
+                <ul id="across-clues"></ul>
+            </div>
+            <div class="clue-box">
+                <h3>ဒေါင်လိုက် (Down)</h3>
